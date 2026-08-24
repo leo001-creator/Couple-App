@@ -1,59 +1,1339 @@
-const KEY='ourLittleWorld_v2';
-const $=id=>document.getElementById(id);
-let data=load(), love=100, lastQuote=-1, heartTaps=0, authenticated=false;
-const quotes=['Su tavimi net paprasta diena tampa gražiu prisiminimu. ❤️','Mano mėgstamiausia vieta yra ten, kur esi tu. 🫶','Dar viena diena kartu. Ir aš vis dar tavęs nepaleisčiau. 💗','Mes neprivalome turėti tobulo gyvenimo. Užtenka turėti vienas kitą. ✨','Kiekviena mūsų diena yra dar viena priežastis šypsotis. 🌷','Tu esi mano mėgstamiausias žmogus šiame pasaulyje. ❤️'];
-const surprises=['Šiandien apkabink ją taip, lyg nebūtum matęs visą savaitę. 🫂','Pasakyk jai vieną dalyką, kurį joje labai mėgsti. ❤️','Nusiųsk jai seną jūsų nuotrauką ir parašyk: „Pameni šitą dieną?“ 📸','Šiandien padarykite vieną visiškai spontanišką dalyką. ✨','Parašyk jai dabar: „Aš labai džiaugiuosi, kad turiu tave.“ 🥹'];
-const achievements=[
- {id:'first',icon:'💗',title:'First Tap',desc:'Pirmą kartą palietėte širdelę',test:s=>s.heartTaps>=1},
- {id:'10',icon:'🫶',title:'10 Hearts',desc:'10 bendrų širdelės paspaudimų',test:s=>s.heartTaps>=10},
- {id:'50',icon:'💞',title:'Heart Storm',desc:'50 bendrų širdelės paspaudimų',test:s=>s.heartTaps>=50},
- {id:'100days',icon:'🌷',title:'100 Days',desc:'Jūs kartu jau 100 dienų',test:s=>s.days>=100},
- {id:'year',icon:'🎂',title:'One Year',desc:'Jūsų pirmieji metai kartu',test:s=>s.days>=365},
- {id:'love100',icon:'❤️',title:'100% Love',desc:'Love Meter pasiekė 100%',test:s=>s.love>=100},
- {id:'song',icon:'🎵',title:'Our Song',desc:'Nustatyta jūsų daina',test:s=>!!s.songName},
- {id:'protected',icon:'🔐',title:'Private World',desc:'Įjungta poros PIN apsauga',test:s=>!!s.pin}
+const STORAGE_KEY = "our_little_world_v3";
+
+let data = loadData();
+
+let currentPin = "";
+
+let loveValue = 100;
+
+let heartCount = 0;
+
+const surprises = [
+  "Parašyk jai vieną dalyką, kurį joje labiausiai mėgsti. ❤️",
+  "Nusiųskite vienas kitam savo mėgstamiausią jūsų nuotrauką. 📸",
+  "Šiandien padarykite spontanišką mažą pasimatymą. ✨",
+  "Pasakyk jai: „Aš labai džiaugiuosi, kad turiu tave.“ 🥹",
+  "Apkabinkite vienas kitą bent 20 sekundžių. 🫂",
+  "Sugalvokite vieną vietą, kurią norite aplankyti kartu. 🌍"
 ];
-function load(){try{return JSON.parse(localStorage.getItem(KEY))||null}catch{return null}}
-function persist(){localStorage.setItem(KEY,JSON.stringify(data))}
-function save(){
- data={yourName:$('yourName').value.trim(),partnerName:$('partnerName').value.trim(),startDate:$('startDate').value,songName:$('songName').value.trim(),songUrl:$('songUrl').value.trim(),pin:$('pinInput').value.trim(),heartTaps:heartTaps};
- persist(); render(); burst();
+
+const $ = id => document.getElementById(id);
+
+
+function loadData() {
+
+  try {
+
+    return JSON.parse(
+      localStorage.getItem(STORAGE_KEY)
+    );
+
+  } catch {
+
+    return null;
+
+  }
 }
-function showSetup(){ $('setup').classList.remove('hidden'); $('home').classList.add('hidden'); $('nav').classList.add('hidden'); $('lock').classList.add('hidden'); }
-function render(){
- if(!data){showSetup();return}
- heartTaps=Number(data.heartTaps||0);
- if(data.pin&&!authenticated){$('setup').classList.add('hidden');$('home').classList.add('hidden');$('nav').classList.add('hidden');$('lock').classList.remove('hidden');return}
- $('lock').classList.add('hidden');$('setup').classList.add('hidden');$('home').classList.remove('hidden');$('nav').classList.remove('hidden');
- $('greeting').textContent=`Labas, ${data.partnerName||'meile'} ❤️`;$('yi').textContent=(data.yourName||'?')[0].toUpperCase();$('pi').textContent=(data.partnerName||'?')[0].toUpperCase();
- $('songPreview').textContent=data.songName||'Dar nenustatyta';$('modalName').textContent=data.songName||'Our Song ❤️';
- const ok=/^https?:\/\//i.test(data.songUrl||'');$('songLink').classList.toggle('hidden',!ok);if(ok)$('songLink').href=data.songUrl;
- tick(); updateLove(); updateAchievements();
+
+
+function saveData() {
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(data)
+  );
+
 }
-function tick(){if(!data?.startDate)return;const start=new Date(`${data.startDate}T00:00:00`),now=new Date();let diff=Math.max(0,now-start);const total=Math.floor(diff/1000),days=Math.floor(total/86400),hours=Math.floor(total%86400/3600),mins=Math.floor(total%3600/60),secs=total%60;$('days').textContent=days.toLocaleString('lt-LT');$('hours').textContent=String(hours).padStart(2,'0');$('mins').textContent=String(mins).padStart(2,'0');$('secs').textContent=String(secs).padStart(2,'0');const idx=days%quotes.length;if(idx!==lastQuote){lastQuote=idx;$('quote').textContent=quotes[idx]} updateAchievements(days);}
-function updateLove(){ $('percent').textContent=love;$('fill').style.width=love+'%';$('tapCount').textContent=heartTaps;$('loveText').textContent=love<50?'Reikia daugiau apkabinimų. 🫂':love<75?'Meilė auga... 💗':love<100?'Jūs labai cute. 🥹':'Per daug meilės vienam ekranui 🥹'; }
-function burst(){for(let i=0;i<16;i++){const p=document.createElement('div');p.className='particle';p.textContent=['❤️','💗','💕','✨'][Math.floor(Math.random()*4)];p.style.left=(35+Math.random()*30)+'%';p.style.top=(40+Math.random()*20)+'%';p.style.animationDelay=(Math.random()*.18)+'s';document.body.appendChild(p);setTimeout(()=>p.remove(),1600)}}
-function toast(t){const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2300)}
-function updateAchievements(days=null){
- const d=days??daysTogether();
- const state={heartTaps,love,songName:data?.songName, pin:data?.pin, days:d};
- const unlocked=achievements.filter(a=>a.test(state));
- $('achievementCount').textContent=`${unlocked.length}/${achievements.length}`;
- $('achievementGrid').innerHTML=achievements.map(a=>{const yes=a.test(state);return `<article class="achievement ${yes?'unlocked':''}"><div class="achIcon">${yes?a.icon:'🔒'}</div><div><b>${a.title}</b><p>${a.desc}</p></div></article>`}).join('');
+
+
+function hasPIN() {
+
+  return !!data?.pin;
+
 }
-function daysTogether(){if(!data?.startDate)return 0;return Math.max(0,Math.floor((Date.now()-new Date(`${data.startDate}T00:00:00`).getTime())/86400000))}
-function openSong(){if(!data?.songName&&!data?.songUrl){toast('Pirmiausia nustatykite jūsų dainą 🎵');return} $('modal').classList.remove('hidden')}
-function unlock(){
- const entered=$('pin').value.trim();
- if(!data?.pin)return;
- if(entered===data.pin){authenticated=true;$('pin').value='';render();burst();toast('Sveiki sugrįžę į jūsų pasaulį ❤️')}
- else { $('pin').value='';$('pin').classList.add('shake');setTimeout(()=>$('pin').classList.remove('shake'),400);toast('Neteisingas PIN 🔐') }
+
+
+function setupApp() {
+
+  if (!data) {
+
+    $("setupScreen")
+      .classList
+      .remove("hidden");
+
+    return;
+
+  }
+
+  $("setupScreen")
+    .classList
+    .add("hidden");
+
+
+  if (hasPIN() && !sessionStorage.getItem("coupleUnlocked")) {
+
+    $("lockScreen")
+      .classList
+      .remove("hidden");
+
+    $("mainScreen")
+      .classList
+      .add("hidden");
+
+    createPinDots();
+
+  } else {
+
+    openMain();
+
+  }
+
 }
-$('save').onclick=()=>{if(!$('yourName').value.trim()||!$('partnerName').value.trim()||!$('startDate').value)return toast('Užpildyk vardus ir datą ❤️');const p=$('pinInput').value.trim();if(p&&(!/^\\d{4,6}$/.test(p)))return toast('PIN turi būti 4–6 skaitmenų 🔐');save()};
-$('settings').onclick=()=>{if(!data)return; $('yourName').value=data.yourName||'';$('partnerName').value=data.partnerName||'';$('startDate').value=data.startDate||'';$('songName').value=data.songName||'';$('songUrl').value=data.songUrl||'';$('pinInput').value=data.pin||'';showSetup()};
-$('loveBtn').onclick=()=>{love=Math.min(100,love+1);heartTaps++;data.heartTaps=heartTaps;persist();updateLove();updateAchievements();burst();toast(love===100?'100% — jūs per cute 🥹':'LOVE +1 💗')};
-$('heartQuick').onclick=()=>{love=Math.min(100,love+1);heartTaps++;data.heartTaps=heartTaps;persist();updateLove();updateAchievements();burst()};
-$('openSong').onclick=openSong;$('songNav').onclick=openSong;$('close').onclick=()=>$('modal').classList.add('hidden');$('modal').querySelector('.backdrop').onclick=()=>$('modal').classList.add('hidden');
-$('surprise').onclick=()=>{toast(surprises[Math.floor(Math.random()*surprises.length)]);burst()};$('loveNav').onclick=()=>document.querySelector('.love').scrollIntoView({behavior:'smooth',block:'center'});$('achNav').onclick=()=>document.querySelector('.achievements').scrollIntoView({behavior:'smooth',block:'center'});
-$('unlock').onclick=unlock;$('pin').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
-setInterval(()=>{if(authenticated)tick()},1000);if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));render();
+
+
+function openMain() {
+
+  $("lockScreen")
+    .classList
+    .add("hidden");
+
+  $("setupScreen")
+    .classList
+    .add("hidden");
+
+  $("mainScreen")
+    .classList
+    .remove("hidden");
+
+  render();
+
+}
+
+
+function createPinDots() {
+
+  const container = $("pinDots");
+
+  container.innerHTML = "";
+
+  for (let i = 0; i < 4; i++) {
+
+    const dot = document.createElement("span");
+
+    dot.className = "pin-dot";
+
+    container.appendChild(dot);
+
+  }
+
+}
+
+
+function updatePinDots() {
+
+  document
+    .querySelectorAll(".pin-dot")
+    .forEach((dot, index) => {
+
+      dot.classList.toggle(
+        "filled",
+        index < currentPin.length
+      );
+
+    });
+
+}
+
+
+function addPinDigit(digit) {
+
+  if (currentPin.length >= 4) {
+    return;
+  }
+
+  currentPin += digit;
+
+  updatePinDots();
+
+  if (currentPin.length === 4) {
+
+    setTimeout(checkPin, 150);
+
+  }
+
+}
+
+
+function deletePinDigit() {
+
+  currentPin =
+    currentPin.slice(
+      0,
+      -1
+    );
+
+  updatePinDots();
+
+}
+
+
+function checkPin() {
+
+  if (currentPin === data.pin) {
+
+    sessionStorage.setItem(
+      "coupleUnlocked",
+      "true"
+    );
+
+    currentPin = "";
+
+    openMain();
+
+    showToast(
+      "Sveiki sugrįžę į jūsų pasaulį ❤️"
+    );
+
+  } else {
+
+    $("pinError")
+      .textContent =
+      "Neteisingas PIN.";
+
+    $("lockScreen")
+      .querySelector(".lock-card")
+      .classList
+      .add("shake");
+
+    setTimeout(() => {
+
+      $("lockScreen")
+        .querySelector(".lock-card")
+        .classList
+        .remove("shake");
+
+    }, 400);
+
+    currentPin = "";
+
+    updatePinDots();
+
+  }
+
+}
+
+
+function createWorld() {
+
+  const yourName =
+    $("yourName").value.trim();
+
+  const partnerName =
+    $("partnerName").value.trim();
+
+  const startDate =
+    $("startDate").value;
+
+  const songName =
+    $("songName").value.trim();
+
+  const songUrl =
+    $("songUrl").value.trim();
+
+  const pin =
+    $("setupPin").value.trim();
+
+
+  if (
+    !yourName ||
+    !partnerName ||
+    !startDate
+  ) {
+
+    showToast(
+      "Užpildyk vardus ir datą ❤️"
+    );
+
+    return;
+
+  }
+
+
+  if (
+    pin &&
+    !/^\d{4}$/.test(pin)
+  ) {
+
+    showToast(
+      "PIN turi būti tiksliai 4 skaitmenys."
+    );
+
+    return;
+
+  }
+
+
+  data = {
+
+    yourName,
+    partnerName,
+    startDate,
+
+    songName,
+    songUrl,
+
+    pin,
+
+    hearts: 0,
+
+    love: 100,
+
+    hugDate: "",
+
+    hugStreak: 0,
+
+    createdAt:
+      new Date().toISOString()
+
+  };
+
+
+  saveData();
+
+  sessionStorage.setItem(
+    "coupleUnlocked",
+    "true"
+  );
+
+  openMain();
+
+  particles(20);
+
+}
+
+
+function updateRelationshipTime() {
+
+  if (!data?.startDate) {
+    return;
+  }
+
+
+  const start =
+    new Date(
+      `${data.startDate}T00:00:00`
+    );
+
+  const now =
+    new Date();
+
+
+  let diff =
+    now.getTime() -
+    start.getTime();
+
+
+  if (diff < 0) {
+    diff = 0;
+  }
+
+
+  const totalSeconds =
+    Math.floor(
+      diff / 1000
+    );
+
+
+  const days =
+    Math.floor(
+      totalSeconds / 86400
+    );
+
+
+  const hours =
+    Math.floor(
+      (totalSeconds % 86400) / 3600
+    );
+
+
+  const minutes =
+    Math.floor(
+      (totalSeconds % 3600) / 60
+    );
+
+
+  const seconds =
+    totalSeconds % 60;
+
+
+  $("daysTogether")
+    .textContent =
+    days.toLocaleString("lt-LT");
+
+
+  $("hours")
+    .textContent =
+    String(hours)
+      .padStart(2, "0");
+
+
+  $("minutes")
+    .textContent =
+    String(minutes)
+      .padStart(2, "0");
+
+
+  $("seconds")
+    .textContent =
+    String(seconds)
+      .padStart(2, "0");
+
+
+  updateAchievements(days);
+
+}
+
+
+function updateUI() {
+
+  $("helloText")
+    .textContent =
+    `Labas, ${data.partnerName} ❤️`;
+
+
+  $("yourInitial")
+    .textContent =
+    firstLetter(data.yourName);
+
+
+  $("partnerInitial")
+    .textContent =
+    firstLetter(data.partnerName);
+
+
+  $("songTitle")
+    .textContent =
+    data.songName ||
+    "Jūsų daina";
+
+
+  $("modalSongName")
+    .textContent =
+    data.songName ||
+    "Jūsų daina";
+
+
+  heartCount =
+    Number(data.hearts || 0);
+
+
+  loveValue =
+    Number(data.love ?? 100);
+
+
+  updateHeartUI();
+
+  updateLoveUI();
+
+  updateHugUI();
+
+}
+
+
+function firstLetter(text) {
+
+  return (
+    text
+      .trim()
+      .charAt(0)
+      .toUpperCase()
+    || "?"
+  );
+
+}
+
+
+/* =========================
+   TAP HEART
+========================= */
+
+function tapHeart() {
+
+  data.hearts =
+    Number(data.hearts || 0) + 1;
+
+  heartCount =
+    data.hearts;
+
+
+  loveValue =
+    Math.min(
+      100,
+      Number(data.love ?? 100) + 1
+    );
+
+  data.love =
+    loveValue;
+
+
+  saveData();
+
+  updateHeartUI();
+
+  updateLoveUI();
+
+  updateAchievements(
+    getDaysTogether()
+  );
+
+  particles(4);
+
+  $("tapHeart")
+    .animate(
+      [
+        {
+          transform: "scale(1)"
+        },
+        {
+          transform: "scale(.78)"
+        },
+        {
+          transform: "scale(1.15)"
+        },
+        {
+          transform: "scale(1)"
+        }
+      ],
+      {
+        duration: 350
+      }
+    );
+
+}
+
+
+function updateHeartUI() {
+
+  $("heartCount")
+    .textContent =
+    heartCount
+      .toLocaleString("lt-LT");
+
+
+  const progress =
+    Math.min(
+      100,
+      heartCount % 100
+    );
+
+
+  $("heartProgress")
+    .style
+    .width =
+    `${progress || (heartCount > 0 ? 100 : 0)}%`;
+
+
+  if (heartCount >= 100) {
+
+    $("heartMessage")
+      .textContent =
+      "Heart Storm unlocked! 🌪️❤️";
+
+  } else if (heartCount >= 10) {
+
+    $("heartMessage")
+      .textContent =
+      "Jūs pradedate kurti savo Love Streak 💕";
+
+  } else {
+
+    $("heartMessage")
+      .textContent =
+      "Pradėkite savo Love Streak ❤️";
+
+  }
+
+}
+
+
+/* =========================
+   DAILY HUG
+========================= */
+
+function todayKey() {
+
+  return new Date()
+    .toISOString()
+    .slice(0, 10);
+
+}
+
+
+function dailyHug() {
+
+  const today =
+    todayKey();
+
+
+  if (data.hugDate === today) {
+
+    showToast(
+      "Šiandien jau apsikabinote 🫂"
+    );
+
+    return;
+
+  }
+
+
+  data.hugDate =
+    today;
+
+
+  data.hugStreak =
+    Number(data.hugStreak || 0) + 1;
+
+
+  saveData();
+
+  updateHugUI();
+
+  updateAchievements(
+    getDaysTogether()
+  );
+
+  particles(12);
+
+  showToast(
+    "Daily Hug užskaitytas 🫂❤️"
+  );
+
+}
+
+
+function updateHugUI() {
+
+  const done =
+    data.hugDate === todayKey();
+
+
+  if (done) {
+
+    $("hugStatus")
+      .textContent =
+      `🫂 Šiandien jau apsikabinote · ${data.hugStreak} dienų streak`;
+
+    $("hugButton")
+      .textContent =
+      "✅ HUGGED TODAY";
+
+    $("hugButton")
+      .disabled = true;
+
+    $("hugButton")
+      .style
+      .opacity = ".7";
+
+  } else {
+
+    $("hugStatus")
+      .textContent =
+      "Šiandien dar nepažymėta.";
+
+    $("hugButton")
+      .textContent =
+      "🫶 I HUG YOU";
+
+    $("hugButton")
+      .disabled = false;
+
+    $("hugButton")
+      .style
+      .opacity = "1";
+
+  }
+
+}
+
+
+/* =========================
+   LOVE METER
+========================= */
+
+function updateLoveUI() {
+
+  $("lovePercent")
+    .textContent =
+    loveValue;
+
+
+  $("meterFill")
+    .style
+    .width =
+    `${loveValue}%`;
+
+
+  let message =
+    "Per daug meilės vienam ekranui 🥹";
+
+
+  if (loveValue <= 35) {
+
+    message =
+      "Reikia daugiau apkabinimų 🫂";
+
+  }
+
+  else if (loveValue <= 70) {
+
+    message =
+      "Meilė auga... 💗";
+
+  }
+
+  else if (loveValue < 100) {
+
+    message =
+      "Jūs labai cute 🥹";
+
+  }
+
+
+  $("loveText")
+    .textContent =
+    message;
+
+}
+
+
+function increaseLove() {
+
+  loveValue =
+    Math.min(
+      100,
+      loveValue + 1
+    );
+
+
+  data.love =
+    loveValue;
+
+
+  saveData();
+
+  updateLoveUI();
+
+  particles(7);
+
+  showToast(
+    loveValue === 100
+      ? "100% LOVE 🥹❤️"
+      : "LOVE +1 💗"
+  );
+
+  updateAchievements(
+    getDaysTogether()
+  );
+
+}
+
+
+/* =========================
+   SONG
+========================= */
+
+function openSong() {
+
+  if (
+    !data.songUrl
+  ) {
+
+    showToast(
+      "Dainos nuoroda dar nenustatyta 🎵"
+    );
+
+    return;
+
+  }
+
+
+  $("songLink")
+    .href =
+    data.songUrl;
+
+
+  $("songModal")
+    .classList
+    .remove("hidden");
+
+}
+
+
+function closeSong() {
+
+  $("songModal")
+    .classList
+    .add("hidden");
+
+}
+
+
+/* =========================
+   SURPRISE
+========================= */
+
+function showSurprise() {
+
+  const random =
+    surprises[
+      Math.floor(
+        Math.random() *
+        surprises.length
+      )
+    ];
+
+
+  $("surpriseText")
+    .textContent =
+    random;
+
+
+  $("surpriseModal")
+    .classList
+    .remove("hidden");
+
+  particles(8);
+
+}
+
+
+function closeSurprise() {
+
+  $("surpriseModal")
+    .classList
+    .add("hidden");
+
+}
+
+
+/* =========================
+   ACHIEVEMENTS
+========================= */
+
+function unlock(id) {
+
+  const element =
+    $(id);
+
+  if (
+    element
+  ) {
+
+    element
+      .classList
+      .add("unlocked");
+
+  }
+
+}
+
+
+function updateAchievements(days) {
+
+  if (!data) {
+    return;
+  }
+
+
+  if (data.hearts >= 1) {
+
+    unlock(
+      "achievement-first-tap"
+    );
+
+  }
+
+
+  if (data.hearts >= 10) {
+
+    unlock(
+      "achievement-ten"
+    );
+
+  }
+
+
+  if (data.hearts >= 100) {
+
+    unlock(
+      "achievement-hundred"
+    );
+
+  }
+
+
+  if (days >= 100) {
+
+    unlock(
+      "achievement-100-days"
+    );
+
+  }
+
+
+  if (days >= 365) {
+
+    unlock(
+      "achievement-year"
+    );
+
+  }
+
+
+  if (data.songName) {
+
+    unlock(
+      "achievement-song"
+    );
+
+  }
+
+
+}
+
+
+function getDaysTogether() {
+
+  if (!data?.startDate) {
+    return 0;
+  }
+
+
+  const start =
+    new Date(
+      `${data.startDate}T00:00:00`
+    );
+
+
+  const now =
+    new Date();
+
+
+  return Math.max(
+    0,
+    Math.floor(
+      (
+        now.getTime() -
+        start.getTime()
+      ) / 86400000
+    )
+  );
+
+}
+
+
+/* =========================
+   PARTICLES
+========================= */
+
+function particles(count = 8) {
+
+  const symbols = [
+    "❤️",
+    "💗",
+    "💕",
+    "💖",
+    "✨"
+  ];
+
+
+  for (
+    let i = 0;
+    i < count;
+    i++
+  ) {
+
+    const particle =
+      document.createElement(
+        "div"
+      );
+
+
+    particle.className =
+      "heart-particle";
+
+
+    particle.textContent =
+      symbols[
+        Math.floor(
+          Math.random() *
+          symbols.length
+        )
+      ];
+
+
+    particle.style.left =
+      `${
+        35 +
+        Math.random() * 30
+      }%`;
+
+
+    particle.style.top =
+      `${
+        42 +
+        Math.random() * 15
+      }%`;
+
+
+    particle.style.animationDelay =
+      `${
+        Math.random() * .25
+      }s`;
+
+
+    document.body
+      .appendChild(
+        particle
+      );
+
+
+    setTimeout(
+      () => particle.remove(),
+      1600
+    );
+
+  }
+
+}
+
+
+/* =========================
+   TOAST
+========================= */
+
+let toastTimer;
+
+
+function showToast(text) {
+
+  const toast =
+    $("toast");
+
+
+  toast.textContent =
+    text;
+
+
+  toast.classList
+    .add("show");
+
+
+  clearTimeout(
+    toastTimer
+  );
+
+
+  toastTimer =
+    setTimeout(
+      () => {
+
+        toast.classList
+          .remove("show");
+
+      },
+      2200
+    );
+
+}
+
+
+/* =========================
+   SETTINGS
+========================= */
+
+function editSettings() {
+
+  $("yourName").value =
+    data.yourName || "";
+
+  $("partnerName").value =
+    data.partnerName || "";
+
+  $("startDate").value =
+    data.startDate || "";
+
+  $("songName").value =
+    data.songName || "";
+
+  $("songUrl").value =
+    data.songUrl || "";
+
+  $("setupPin").value =
+    data.pin || "";
+
+
+  $("mainScreen")
+    .classList
+    .add("hidden");
+
+
+  $("setupScreen")
+    .classList
+    .remove("hidden");
+
+}
+
+
+/* =========================
+   NAVIGATION
+========================= */
+
+document
+  .querySelectorAll(".nav")
+  .forEach(nav => {
+
+    nav.addEventListener(
+      "click",
+      () => {
+
+        document
+          .querySelectorAll(".nav")
+          .forEach(
+            n =>
+              n.classList
+                .remove("active")
+          );
+
+
+        nav.classList
+          .add("active");
+
+
+        const target =
+          nav.dataset.target;
+
+
+        if (
+          target === "top"
+        ) {
+
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+          });
+
+        }
+
+
+        if (
+          target ===
+          "tap-section"
+        ) {
+
+          $("tapHeart")
+            .scrollIntoView({
+              behavior: "smooth",
+              block: "center"
+            });
+
+        }
+
+
+        if (
+          target ===
+          "song-section"
+        ) {
+
+          $("songTitle")
+            .scrollIntoView({
+              behavior: "smooth",
+              block: "center"
+            });
+
+        }
+
+
+        if (
+          target ===
+          "achievements-section"
+        ) {
+
+          document
+            .querySelector(
+              ".achievement-grid"
+            )
+            .scrollIntoView({
+              behavior: "smooth",
+              block: "center"
+            });
+
+        }
+
+      }
+
+    );
+
+  });
+
+
+/* =========================
+   EVENT LISTENERS
+========================= */
+
+$("createWorld")
+  .addEventListener(
+    "click",
+    createWorld
+  );
+
+
+$("tapHeart")
+  .addEventListener(
+    "click",
+    tapHeart
+  );
+
+
+$("hugButton")
+  .addEventListener(
+    "click",
+    dailyHug
+  );
+
+
+$("loveButton")
+  .addEventListener(
+    "click",
+    increaseLove
+  );
+
+
+$("playSong")
+  .addEventListener(
+    "click",
+    openSong
+  );
+
+
+$("surpriseButton")
+  .addEventListener(
+    "click",
+    showSurprise
+  );
+
+
+$("anotherSurprise")
+  .addEventListener(
+    "click",
+    showSurprise
+  );
+
+
+$("closeSong")
+  .addEventListener(
+    "click",
+    closeSong
+  );
+
+
+$("closeSurprise")
+  .addEventListener(
+    "click",
+    closeSurprise
+  );
+
+
+$("settingsBtn")
+  .addEventListener(
+    "click",
+    editSettings
+  );
+
+
+document
+  .querySelectorAll(
+    "[data-pin]"
+  )
+  .forEach(button => {
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        addPinDigit(
+          button.dataset.pin
+        );
+
+      }
+    );
+
+  });
+
+
+$("deletePin")
+  .addEventListener(
+    "click",
+    deletePinDigit
+  );
+
+
+document
+  .querySelectorAll(".modal-bg")
+  .forEach(bg => {
+
+    bg.addEventListener(
+      "click",
+      () => {
+
+        closeSong();
+        closeSurprise();
+
+      }
+    );
+
+  });
+
+
+/* =========================
+   START
+========================= */
+
+setInterval(
+  updateRelationshipTime,
+  1000
+);
+
+
+if (
+  "serviceWorker"
+  in navigator
+) {
+
+  window.addEventListener(
+    "load",
+    () => {
+
+      navigator
+        .serviceWorker
+        .register(
+          "./sw.js"
+        )
+        .catch(
+          console.warn
+        );
+
+    }
+  );
+
+}
+
+
+setupApp();
+
+
+if (data) {
+
+  updateUI();
+
+}
